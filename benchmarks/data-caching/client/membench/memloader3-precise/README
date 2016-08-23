@@ -1,0 +1,81 @@
+Options:
+
+--db <sample file name> <database size> \\ Default is "--db - 5000".
+	Specifies the database. <sample file name> is the name of the sample file, or '-' for standard input. <database size> is the size of the database. The database will be generated according to the sample.
+	Each line of the sample file represents a memcached record, and has the following format:
+		<key_size> <value_size> <popularity>
+	<popularity> is an integer indicating how popular that record is relative to other records.
+
+--server {<hostname port>}+
+	Specifies a server. If there are multiple <hostname port> pairs, it DOES NOT mean multiple servers, but a server with multiple addresses. To specify multiple servers, give one --server option for each server.
+
+--mirror \\ Default is shared mode.
+	Benchmark servers in mirror mode. When there are multiple servers, they can be benchmarked in sharded mode or mirror mode. In sharded mode, the database is split across servers. In mirror mode, the database is replicated in each server.
+
+--vclients \\ Default is "--vclients 1"
+	Number of virtual clients. When benchmarking in sharded mode, a virtual client connects to all servers. When benchmarking in mirror mode, a virtual client connects to just one server, and virtual clients are evenly distributed to servers. Note that connections are first divided to servers, and then sub-divided to interfaces. This means servers with more interfaces DOES NOT get more connections. For a given server, connections are made to its interfaces in a round-robin fastion.
+
+--load \\ Default is "--load 100000"
+	Target request sending rate. Actual request sending rate may be less than this.
+
+--qos  \\ Default is "--qos 1.0"
+	Target QoS, or reply latency. The unit is millisecond. Fractions allowed.
+
+--timeout \\ Default is "--timeout 20.0"
+	This is only used when the UDP protocol is used. If a reply is not received after this time, the program can choose to (but not necessarily) give up waiting. The unit is millisecond. Fractions allowed.
+
+--round [all|acc] <number of iterations> <length of one iteration in seconds> \\ Defaut is "--round 0 5"
+	Specifies a round of data outputs. There are two kinds of data output: discrete (D) and accumulate(A). The algorithm for D is: {read counters; sleep iteration-length seconds; read counters again; use counter deltas to compute benchmark results}. The algorithm for A is similar, except the delta is with respect to the beginning of the round, not the beginning of the iteration. If 'acc' is given, only A is printed. If 'all' is given, both A and D are printed. If neither is given, only 'D' is printed. If number of iterations is 0, it means infinite.
+	Multiple rounds can be given by using multiple '--round' options. When going from one round to another, there will NOT be any pause in request sending.
+
+--udp \\ Default is TCP.
+	Use the UDP protocol. When UDP is used, everything stays the same in terms of number of connections and distribution of connections to servers and interfaces. Except every TCP connection is replaced with a "UDP connection".
+
+--nagles \\ Default is turn OFF Nagle's algorithm.
+	Use Nagle's algorithm. Only for TCP.
+
+--burst-size \\ Default is "--burst-size 1", meaning no bursts.
+	Specifies for EACH connection, in bursts of what size are requests sent.
+
+--max-outstanding \\ Default is "--max-outstanding 10000"
+	Specifies for EACH connection, how many outstanding requests are allowed.
+
+--command {set|set-miss|enum}+
+	Modifies how the program generates requests. By default, GET requests for randomly chosen database entries are sent. If 'set' is given, SET requests are sent instead. If 'set-miss' is given, a SET will be sent when there is a miss. If 'enum', database entries are enumerated intsead of randomly chosen.
+
+--preload
+	A special mode for preloading servers with data. When this is used, one only need to specify the servers, the database and whether the benchmarking mode is mirror or sharded.
+
+--base-port // Default is "--base-port 0"
+	If this is 0, use automatic client port assignments. Else assign client ports starting from base-port.
+
+--set-ratio // Default is "--set-ratio 0.0"
+	Force the set ratio to a certain number. Do NOT use with 'set-miss'.
+
+Outputs:
+
+qos: among all the retired (replied, timeout, etc.) requests, what percentage meets QoS.
+load: the target request sending rate.
+send_rate: the actual request sending rate.
+reply_rate: the reply rate.
+avg_lat: average latency for the replied requests.
+hit_ratio: hit ratio for GET requests.
+get_ratio: <number of GET reqeusts> / <number of sent requests>.
+set_ratio: <number of SET reqeusts> / <number of sent requests>.
+exr: request timeout rate (only for UDP).
+rxr: hard to explain.
+ryr: hard to explain.
+co: hard to explain.
+os_sum: total number of outstanding requests. This is a snapshot (not delta-based)  counter.
+os_max: maximum number of outstanding requests among connections. This is a snapshot counter.
+os_min: minimum number of outstanding requests among connections. This is a snapshot counter.
+os_avg: average number of outstanding requests among connections. This is a snapshot counter.
+
+Examples:
+
+Preload a server with 5000000 records with key size 40 and value size 500:
+	echo 40 500 1 | ./memloader --db - 5000000 --server localhost 11211 --preload
+
+Benchmark the same server indefinitely with a load of 100000:
+	echo 40 500 1 | ./memloader --db - 5000000 --server localhost 11211 --load 100000
+

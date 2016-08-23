@@ -1,0 +1,3 @@
+When receiving, should timestamps be collected before or after read?
+When sending, should timestamps be collected before for after write?
+Within callbacks, the state machine can be driven multiple times if it's state stays being "running". Keep driving until the state is no longer "running" is probably not a good idea. For when the load is high, this may create too much bursts. So either set an upper limit or use random decisions.

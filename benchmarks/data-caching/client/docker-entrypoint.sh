@@ -2,21 +2,13 @@
 set -e
 set -x
 
-if [ "$1" = '-rps' ]; then
-	# default configuration
-	echo "dc-server, 11211" > "/usr/src/memcached/memcached_client/servers.txt"
-	/usr/src/memcached/memcached_client/loader \
-		-a /usr/src/memcached/twitter_dataset/twitter_dataset_unscaled \
-		-o /usr/src/memcached/twitter_dataset/twitter_dataset_5x \
-		-s /usr/src/memcached/memcached_client/servers.txt \
-		-w 4 -S 5 -D 2048 -j
+rps=$1
+conns=$2
 
-	/usr/src/memcached/memcached_client//loader \
-		-a /usr/src/memcached/twitter_dataset/twitter_dataset_5x \
-		-s /usr/src/memcached/memcached_client/servers.txt \
-		-g 0.8 -c 200 -w 4 -e -r "$2" -t 123 -T 120
+# Preload the server
+/usr/src/memloader/memloader --server dc-server 11211 --db ./twitter.txt 5348680 --preload --load 100000
 
-else
-	# custom command
-	exec "$@"
-fi
+# Run the benchmark with the 5X scaled version
+
+/usr/src/memloader/memloader --server dc-server 11211 --db ./twitter.txt 5348680 --set-ratio 0.2 --send-traffic-shape uniform 1.0 \
+	--vclients $conns --load $rps --qos 1 --round 1 60 --round all 5000 2 --connect-speed 100 --connection-init-load 10 --connection-ramp-up-speed 300

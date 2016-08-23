@@ -1,0 +1,3 @@
+The file twitter.txt is created by applying reformat.py to the
+twitter_dataset_unscaled file inside the memcached client of the
+CloudSuite project <http://parsa.epfl.ch/cloudsuite/cloudsuite.html>.
